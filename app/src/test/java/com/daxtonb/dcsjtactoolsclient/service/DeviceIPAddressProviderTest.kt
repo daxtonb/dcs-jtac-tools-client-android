@@ -3,15 +3,15 @@ package com.daxtonb.dcsjtactoolsclient.service
 import org.junit.Assert.*
 import org.junit.Test
 
-class DeviceIPAddressFinderTest {
+class DeviceIPAddressProviderTest {
     @Test
     fun findDeviceIPAddress() {
         // Arrange
         val regex = Regex("(\\d{1,3}\\.){3}\\d{1,3}")
-        val service = DeviceIPAddressFinder()
+        val provider = DeviceIPAddressProvider()
 
         // Act
-        var result = service.getIPAddress()
+        val result = provider.getIPAddress()
 
         // Assert
         assertNotNull(result)

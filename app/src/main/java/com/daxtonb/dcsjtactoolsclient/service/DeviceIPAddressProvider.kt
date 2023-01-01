@@ -6,7 +6,7 @@ import java.net.NetworkInterface
 import java.util.*
 // See https://stackoverflow.com/questions/26402218/how-to-get-the-ip-address-of-an-android-mobile-programatically
 
-class DeviceIPAddressFinder {
+class DeviceIPAddressProvider {
     fun getIPAddress(): String? {
         try {
             return findDeviceIPAddress()
@@ -29,6 +29,7 @@ class DeviceIPAddressFinder {
     private fun searchInetAddressesForDeviceIP(addresses: List<InetAddress>): String? {
         addresses.forEach {
             val hostAddress: String = it.hostAddress
+                ?: throw Exception("Host address not found.")
             val isIPv4 = hostAddress.indexOf(':') < 0
             if (isIPv4) return hostAddress
         }

@@ -132,7 +132,7 @@ class ScalingBufferTest {
         }
 
         // Act
-        var result = buffer.readNext(socket)
+        val result = buffer.readNext(socket)
 
         // Assert
         assertEquals(data, result)
@@ -140,7 +140,7 @@ class ScalingBufferTest {
     }
 
     @Test
-    fun readNext_incompleteDataReceived_returnsJson() {
+    fun readNext_incompleteDataReceived_returnsEmptyString() {
         // Arrange
         val data = "{\"key\":\"value\""
         val slot = slot<DatagramPacket>()
@@ -155,10 +155,9 @@ class ScalingBufferTest {
         }
 
         // Act
-        var result = buffer.readNext(socket)
+        val result = buffer.readNext(socket)
 
         // Assert
         assertEquals(expectedResult, result)
-
     }
 }

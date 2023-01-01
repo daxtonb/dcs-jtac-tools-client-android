@@ -2,68 +2,42 @@ package com.daxtonb.dcsjtactoolsclient.service.portlistener
 
 import io.mockk.every
 import io.mockk.mockk
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PortListenerTest {
     @Test
-    fun closeConnection_nullSocket_noErrorThrown() {
-        // Arrange
-        val listener = PortListener(1) { }
-
-        // Act
-        listener.closeConnection()
-
-        // Assert
-        assertTrue(true)
-    }
-
-    @Test
-    fun stop_notListening() {
-        // Arrange
-        val listener = PortListener(1) { }
-
-        // Act
-        listener.stop()
-
-        // Assert
-        assertFalse(listener.isListening)
-    }
-
-    @Test
-    fun read_dataReturned_isStillListening() {
+    fun read_dataReturned() {
         // Arrange
         val data = "{\"key\":\"value\"}"
-        val listener = PortListener(1) { }
         val buffer = mockk<ScalingBuffer>()
-        every {
-            buffer.readNext(any())
-        } answers {
-            data
-        }
+        val port = 1
+        every { buffer.readNext(any()) } answers { data }
+        val listener = PortListener(buffer, port)
 
         // Act
-        val result = listener.read(buffer)
+        val result = listener.read()
 
         // Assert
         assertEquals(data, result)
-        assertTrue(listener.isListening)
+        assertTrue(listener.isPortClosed)
     }
 
     @Test
-    fun read_ExceptionThrown_isStillListening()
-    {
+    fun read_exceptionThrown_returnsEmptyString() {
         // Arrange
-        val listener = PortListener(1) { }
+        val expected = ""
+        val port = 1
         val buffer = mockk<ScalingBuffer>()
-        every {
-            buffer.readNext(any())
-        } answers {
-            throw Exception()
-        }
+        every { buffer.readNext(any()) } answers { throw Exception() }
+        val listener = PortListener(buffer, port)
 
-        // Act & Assert
-        assertThrows(Exception::class.java) { listener.read(buffer) }
-        assertTrue(listener.isListening)
+        // Act
+        val result = listener.read()
+
+        // Assert
+        assertEquals(expected, result)
+        assertTrue(listener.isPortClosed)
     }
 }
