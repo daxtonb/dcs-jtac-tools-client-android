@@ -48,9 +48,21 @@ class MainActivity : AppCompatActivity() {
 
         // Observe ViewModel LiveData
         viewModel.unitNames.observe(this, Observer { unitNames ->
+            // Remember the currently selected item
+            val selectedItem = unitNameSpinner.selectedItem as? String
+
+            // Update the adapter with the new list
             unitNameAdapter.clear()
             unitNameAdapter.addAll(unitNames)
             unitNameAdapter.notifyDataSetChanged()
+
+            // Restore the selection
+            selectedItem?.let {
+                val position = unitNameAdapter.getPosition(it)
+                if (position >= 0) {
+                    unitNameSpinner.setSelection(position, false)
+                }
+            }
         })
 
         viewModel.webSocketStatusIcon.observe(this, Observer { iconResourceId ->

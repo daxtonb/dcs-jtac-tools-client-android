@@ -10,6 +10,7 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 
 class MainViewModel(private val repository: NetworkRepository) : ViewModel() {
+    private val unitNamesSet = mutableSetOf<String>()
     private val _unitNames = MutableLiveData<List<String>>()
     val unitNames: LiveData<List<String>> = _unitNames
 
@@ -48,11 +49,13 @@ class MainViewModel(private val repository: NetworkRepository) : ViewModel() {
             val match = regex.find(text)
             val unitName = match?.groups?.get(1)?.value
             if (!unitName.isNullOrEmpty()) {
-                val updatedList = _unitNames.value?.toMutableList() ?: mutableListOf()
-                if (!updatedList.contains(unitName)) {
-                    updatedList.add(unitName)
-                    updatedList.sort()
-                    _unitNames.postValue(updatedList)
+                val updated = synchronized(unitNamesSet) {
+                    val added = unitNamesSet.add(unitName)
+                    if (added) {
+                        val sortedList = unitNamesSet.sorted()
+                        _unitNames.postValue(sortedList)
+                    }
+                    added
                 }
             }
         }
