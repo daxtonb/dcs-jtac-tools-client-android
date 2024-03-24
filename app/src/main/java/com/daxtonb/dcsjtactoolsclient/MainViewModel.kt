@@ -2,6 +2,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.daxtonb.dcsjtactoolsclient.NetworkRepository
 import com.daxtonb.dcsjtactoolsclient.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

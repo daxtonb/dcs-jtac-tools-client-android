@@ -1,8 +1,6 @@
 package com.daxtonb.dcsjtactoolsclient
 
 import MainViewModel
-import MainViewModelFactory
-import NetworkRepository
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.EditText

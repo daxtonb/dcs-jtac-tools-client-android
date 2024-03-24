@@ -1,3 +1,6 @@
+package com.daxtonb.dcsjtactoolsclient
+
+import MainViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 
