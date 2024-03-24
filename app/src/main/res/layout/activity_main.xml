@@ -53,4 +53,12 @@
         android:layout_height="wrap_content"
         android:textOff="Connect"
         android:textOn="Disconnect"/>
+
+    <Spinner
+        android:id="@+id/unitNameSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"/>
+
+
 </LinearLayout>

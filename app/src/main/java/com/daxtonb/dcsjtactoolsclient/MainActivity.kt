@@ -23,7 +23,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var client: OkHttpClient
     private var webSocket: WebSocket? = null
     private var udpSocket: DatagramSocket = DatagramSocket()
+    private var unitNames: MutableList<String> = mutableListOf()
+
     private lateinit var webSocketStatusIcon: ImageView
+    private lateinit var unitNameSpinner: Spinner
+    private lateinit var unitNameAdapter: ArrayAdapter<String>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +54,12 @@ class MainActivity : AppCompatActivity() {
         serverAddressInput.setText("10.0.2.2")
         portInput.setText("9345")
 
+        // Initialize the Spinner and Adapter for unit names
+        unitNameSpinner = findViewById(R.id.unitNameSpinner)
+        unitNameAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, unitNames)
+        unitNameAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        unitNameSpinner.adapter = unitNameAdapter
+
         connectSwitch.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 val protocol = protocolSpinner.selectedItem.toString()
@@ -70,6 +80,16 @@ class MainActivity : AppCompatActivity() {
                                 val buf = text.toByteArray()
                                 val packet = DatagramPacket(buf, buf.size, localhostAddress, 4242)
                                 udpSocket.send(packet)
+
+                                val regex = Regex("uid=\"([a-zA-Z0-9_-]+)\"")
+                                val match = regex.find(text)
+                                val unitName = match?.groups?.get(1)?.value
+
+                                if (!unitName.isNullOrEmpty() && !unitNames.contains(unitName)) {
+                                    unitNames.add(unitName)
+                                    unitNames.sort()
+                                    unitNameAdapter.notifyDataSetChanged()
+                                }
                             } catch (e: Exception) {
                                 e.printStackTrace()
                                 // Handle any exceptions, possibly on the UI thread with withContext(Dispatchers.Main) { ... }
