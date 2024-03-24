@@ -38,7 +38,7 @@ class MainViewModel(private val repository: NetworkRepository) : ViewModel() {
     }
 
     fun disconnect() {
-        repository.closeConnections()
+        repository.disconnectFromHub()
     }
 
     private fun extractAndAddUnitName(text: String) {
@@ -59,6 +59,6 @@ class MainViewModel(private val repository: NetworkRepository) : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
-        disconnect()
+        repository.closeConnections()
     }
 }

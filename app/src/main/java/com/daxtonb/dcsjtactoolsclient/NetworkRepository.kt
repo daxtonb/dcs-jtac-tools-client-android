@@ -26,9 +26,13 @@ class NetworkRepository(private val client: OkHttpClient) {
         }
     }
 
+    fun disconnectFromHub() {
+        webSocket?.close(1000, "Disconnect")
+    }
+
     fun closeConnections() {
         client.dispatcher.executorService.shutdown()
         udpSocket.close()
-        webSocket?.close(1000, "Disconnect")
+        disconnectFromHub()
     }
 }
