@@ -17,8 +17,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 
 class MainActivity : AppCompatActivity() {
-    private var isBound: Boolean = false
-    private var hubService: DcsJtacHubService? = null
+    private var _isBound: Boolean = false
+    private var _hubService: DcsJtacHubService? = null
 
     private lateinit var _webSocketStatusIcon: ImageView
     private lateinit var _unitNameSpinner: Spinner
@@ -28,8 +28,8 @@ class MainActivity : AppCompatActivity() {
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as DcsJtacHubService.LocalBinder
-            hubService = binder.getService()
-            isBound = true
+            _hubService = binder.getService()
+            _isBound = true
 
             setupListeners()
             setupProtocolSpinner()
@@ -37,7 +37,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
-            isBound = false
+            _isBound = false
         }
     }
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,7 +59,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupListeners() {
         // Observe live unit names data
-        hubService?.unitNames?.observe(this, Observer { unitNames ->
+        _hubService?.unitNames?.observe(this, Observer { unitNames ->
             // Remember the currently selected item
             val selectedItem = _unitNameSpinner.selectedItem as? String
 
@@ -77,13 +77,13 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        hubService?.webSocketStatus?.observe(this, Observer { iconResourceId ->
+        _hubService?.webSocketStatus?.observe(this, Observer { iconResourceId ->
             _webSocketStatusIcon.setImageResource(iconResourceId)
         })
 
         _unitNameSpinner.setOnItemSelectedListener(onItemSelected = { parent, view, position, id ->
             val selectedUnitName = parent?.getItemAtPosition(position).toString()
-            hubService?.setSelectedUnit(selectedUnitName)
+            _hubService?.setSelectedUnit(selectedUnitName)
         } )
     }
 
@@ -100,11 +100,11 @@ class MainActivity : AppCompatActivity() {
                 val serverAddress = serverAddressInput.text.toString()
                 val port = portInput.text.toString()
                 val fullAddress = "$protocol$serverAddress:$port"
-                hubService?.connectToHub(fullAddress)
+                _hubService?.connectToHub(fullAddress)
                 startForegroundService(_intent)
             } else {
                 // Handle disconnection logic
-                hubService?.disconnectFromHub()
+                _hubService?.disconnectFromHub()
                 stopService(_intent)
             }
         }
@@ -139,7 +139,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        hubService?.disconnectFromHub()
+        _hubService?.disconnectFromHub()
         stopService(_intent)
     }
 }
