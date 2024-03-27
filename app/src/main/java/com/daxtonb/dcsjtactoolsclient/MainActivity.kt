@@ -12,27 +12,26 @@ import android.widget.Switch
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import okhttp3.OkHttpClient
 
 class MainActivity : AppCompatActivity() {
 
-    private var client = OkHttpClient()
     private lateinit var viewModel: MainViewModel
 
-    private lateinit var webSocketStatusIcon: ImageView
-    private lateinit var unitNameSpinner: Spinner
-    private lateinit var unitNameAdapter: ArrayAdapter<String>
+    private lateinit var _webSocketStatusIcon: ImageView
+    private lateinit var _unitNameSpinner: Spinner
+    private lateinit var _unitNameAdapter: ArrayAdapter<String>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         // Initialize views
-        webSocketStatusIcon = findViewById(R.id.webSocketStatusIcon)
-        unitNameSpinner = findViewById(R.id.unitNameSpinner)
-        unitNameAdapter =
+        _webSocketStatusIcon = findViewById(R.id.webSocketStatusIcon)
+        _unitNameSpinner = findViewById(R.id.unitNameSpinner)
+        _unitNameAdapter =
             ArrayAdapter(this, android.R.layout.simple_spinner_item, mutableListOf<String>())
-        unitNameAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        unitNameSpinner.adapter = unitNameAdapter
+        _unitNameAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        _unitNameSpinner.adapter = _unitNameAdapter
 
         val protocolSpinner: Spinner = findViewById(R.id.protocolSpinner)
         val serverAddressInput: EditText = findViewById(R.id.serverAddressInput)
@@ -45,34 +44,34 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupViewModel() {
-        viewModel = ViewModelProvider(this, MainViewModelFactory(NetworkRepository(client))).get(
+        viewModel = ViewModelProvider(this, MainViewModelFactory(NetworkRepository())).get(
             MainViewModel::class.java
         )
 
         // Observe ViewModel LiveData
         viewModel.unitNames.observe(this, Observer { unitNames ->
             // Remember the currently selected item
-            val selectedItem = unitNameSpinner.selectedItem as? String
+            val selectedItem = _unitNameSpinner.selectedItem as? String
 
             // Update the adapter with the new list
-            unitNameAdapter.clear()
-            unitNameAdapter.addAll(unitNames)
-            unitNameAdapter.notifyDataSetChanged()
+            _unitNameAdapter.clear()
+            _unitNameAdapter.addAll(unitNames)
+            _unitNameAdapter.notifyDataSetChanged()
 
             // Restore the selection
             selectedItem?.let {
-                val position = unitNameAdapter.getPosition(it)
+                val position = _unitNameAdapter.getPosition(it)
                 if (position >= 0) {
-                    unitNameSpinner.setSelection(position, false)
+                    _unitNameSpinner.setSelection(position, false)
                 }
             }
         })
 
         viewModel.webSocketStatusIcon.observe(this, Observer { iconResourceId ->
-            webSocketStatusIcon.setImageResource(iconResourceId)
+            _webSocketStatusIcon.setImageResource(iconResourceId)
         })
 
-        unitNameSpinner.setOnItemSelectedListener(onItemSelected = { parent, view, position, id ->
+        _unitNameSpinner.setOnItemSelectedListener(onItemSelected = { parent, view, position, id ->
             val selectedUnitName = parent?.getItemAtPosition(position).toString()
             viewModel.setSelectedUnitName(selectedUnitName)
         } )
@@ -127,7 +126,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        client.dispatcher.executorService.shutdown()
         viewModel.disconnect()
     }
 }

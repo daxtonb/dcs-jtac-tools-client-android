@@ -8,13 +8,14 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 
-class NetworkRepository(private val client: OkHttpClient) {
-    private var webSocket: WebSocket? = null
-    private val udpSocket: DatagramSocket = DatagramSocket()
+class NetworkRepository() {
+    private var _client = OkHttpClient()
+    private var _webSocket: WebSocket? = null
+    private val _udpSocket: DatagramSocket = DatagramSocket()
 
     fun connectToHub(url: String, webSocketListener: WebSocketListener) {
         val request = Request.Builder().url(url).build()
-        webSocket = client.newWebSocket(request, webSocketListener)
+        _webSocket = _client.newWebSocket(request, webSocketListener)
     }
 
     fun sendCursorOnTarget(text: String) {
@@ -22,19 +23,19 @@ class NetworkRepository(private val client: OkHttpClient) {
             val localhostAddress: InetAddress = InetAddress.getByName("localhost")
             val buf = text.toByteArray()
             val packet = DatagramPacket(buf, buf.size, localhostAddress, 4242)
-            udpSocket.send(packet)
+            _udpSocket.send(packet)
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
     fun disconnectFromHub() {
-        webSocket?.close(1000, "Disconnect")
+        _webSocket?.close(1000, "Disconnect")
     }
 
     fun closeConnections() {
-        client.dispatcher.executorService.shutdown()
-        udpSocket.close()
+        _client.dispatcher.executorService.shutdown()
+        _udpSocket.close()
         disconnectFromHub()
     }
 }
