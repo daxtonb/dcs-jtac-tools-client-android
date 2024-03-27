@@ -1,6 +1,11 @@
 package com.daxtonb.dcsjtactoolsclient
 
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
+import android.os.IBinder
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -12,16 +17,37 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 
 class MainActivity : AppCompatActivity() {
-
-    private lateinit var viewModel: MainViewModel
+    private var isBound: Boolean = false
+    private var hubService: DcsJtacHubService? = null
 
     private lateinit var _webSocketStatusIcon: ImageView
     private lateinit var _unitNameSpinner: Spinner
     private lateinit var _unitNameAdapter: ArrayAdapter<String>
+    private lateinit var _intent: Intent
 
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as DcsJtacHubService.LocalBinder
+            hubService = binder.getService()
+            isBound = true
+
+            setupListeners()
+            setupProtocolSpinner()
+            handleServerToggled()
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            isBound = false
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        _intent = Intent(this, DcsJtacHubService::class.java).also { intent ->
+            startForegroundService(intent)
+            bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
 
         // Initialize views
         _webSocketStatusIcon = findViewById(R.id.webSocketStatusIcon)
@@ -30,22 +56,11 @@ class MainActivity : AppCompatActivity() {
             ArrayAdapter(this, android.R.layout.simple_spinner_item, mutableListOf<String>())
         _unitNameAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         _unitNameSpinner.adapter = _unitNameAdapter
-
-        val protocolSpinner: Spinner = findViewById(R.id.protocolSpinner)
-        val serverAddressInput: EditText = findViewById(R.id.serverAddressInput)
-        val portInput: EditText = findViewById(R.id.portInput)
-        val connectSwitch: Switch = findViewById(R.id.connectSwitch)
-
-        setupViewModel()
-        setupProtocolSpinner(protocolSpinner)
-        handleServerToggled(connectSwitch, protocolSpinner, serverAddressInput, portInput)
     }
 
-    private fun setupViewModel() {
-        viewModel = MainViewModel()
-
-        // Observe ViewModel LiveData
-        viewModel.unitNames.observe(this, Observer { unitNames ->
+    private fun setupListeners() {
+        // Observe live unit names data
+        hubService?.unitNames?.observe(this, Observer { unitNames ->
             // Remember the currently selected item
             val selectedItem = _unitNameSpinner.selectedItem as? String
 
@@ -63,22 +78,22 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        viewModel.webSocketStatusIcon.observe(this, Observer { iconResourceId ->
+        hubService?.webSocketStatus?.observe(this, Observer { iconResourceId ->
             _webSocketStatusIcon.setImageResource(iconResourceId)
         })
 
         _unitNameSpinner.setOnItemSelectedListener(onItemSelected = { parent, view, position, id ->
             val selectedUnitName = parent?.getItemAtPosition(position).toString()
-            viewModel.setSelectedUnitName(selectedUnitName)
+            hubService?.setSelectedUnit(selectedUnitName)
         } )
     }
 
-    private fun handleServerToggled(
-        connectSwitch: Switch,
-        protocolSpinner: Spinner,
-        serverAddressInput: EditText,
-        portInput: EditText
-    ) {
+    private fun handleServerToggled() {
+        val serverAddressInput: EditText = findViewById(R.id.serverAddressInput)
+        val portInput: EditText = findViewById(R.id.portInput)
+        val protocolSpinner: Spinner = findViewById(R.id.protocolSpinner)
+        val connectSwitch: Switch = findViewById(R.id.connectSwitch)
+
         connectSwitch.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 // Extract connection details from UI, construct the full address and connect
@@ -86,15 +101,16 @@ class MainActivity : AppCompatActivity() {
                 val serverAddress = serverAddressInput.text.toString()
                 val port = portInput.text.toString()
                 val fullAddress = "$protocol$serverAddress:$port"
-                viewModel.connect(fullAddress, LocationMocker(this))
+                hubService?.connectToHub(fullAddress)
             } else {
                 // Handle disconnection logic
-                viewModel.disconnect()
+                hubService?.disconnectFromHub()
             }
         }
     }
 
-    private fun setupProtocolSpinner(protocolSpinner: Spinner) {
+    private fun setupProtocolSpinner() {
+        val protocolSpinner: Spinner = findViewById(R.id.protocolSpinner)
         ArrayAdapter.createFromResource(
             this,
             R.array.protocol_options,
@@ -122,6 +138,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.disconnect()
+        hubService?.disconnectFromHub()
+        stopService(_intent)
     }
 }
