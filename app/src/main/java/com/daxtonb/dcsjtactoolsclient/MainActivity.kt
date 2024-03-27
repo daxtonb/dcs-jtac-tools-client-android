@@ -2,6 +2,8 @@ package com.daxtonb.dcsjtactoolsclient
 
 import MainViewModel
 import android.os.Bundle
+import android.view.View
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.ImageView
@@ -14,7 +16,7 @@ import okhttp3.OkHttpClient
 
 class MainActivity : AppCompatActivity() {
 
-    private  var client = OkHttpClient()
+    private var client = OkHttpClient()
     private lateinit var viewModel: MainViewModel
 
     private lateinit var webSocketStatusIcon: ImageView
@@ -27,7 +29,8 @@ class MainActivity : AppCompatActivity() {
         // Initialize views
         webSocketStatusIcon = findViewById(R.id.webSocketStatusIcon)
         unitNameSpinner = findViewById(R.id.unitNameSpinner)
-        unitNameAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, mutableListOf<String>())
+        unitNameAdapter =
+            ArrayAdapter(this, android.R.layout.simple_spinner_item, mutableListOf<String>())
         unitNameAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         unitNameSpinner.adapter = unitNameAdapter
 
@@ -68,6 +71,11 @@ class MainActivity : AppCompatActivity() {
         viewModel.webSocketStatusIcon.observe(this, Observer { iconResourceId ->
             webSocketStatusIcon.setImageResource(iconResourceId)
         })
+
+        unitNameSpinner.setOnItemSelectedListener(onItemSelected = { parent, view, position, id ->
+            val selectedUnitName = parent?.getItemAtPosition(position).toString()
+            viewModel.setSelectedUnitName(selectedUnitName)
+        } )
     }
 
     private fun handleServerToggled(
@@ -83,7 +91,7 @@ class MainActivity : AppCompatActivity() {
                 val serverAddress = serverAddressInput.text.toString()
                 val port = portInput.text.toString()
                 val fullAddress = "$protocol$serverAddress:$port"
-                viewModel.connect(fullAddress)
+                viewModel.connect(fullAddress, LocationMocker(this))
             } else {
                 // Handle disconnection logic
                 viewModel.disconnect()
@@ -99,6 +107,21 @@ class MainActivity : AppCompatActivity() {
         ).also { adapter ->
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             protocolSpinner.adapter = adapter
+        }
+    }
+
+    private fun Spinner.setOnItemSelectedListener(
+        onItemSelected: (parent: AdapterView<*>?, view: View?, position: Int, id: Long) -> Unit,
+        onNothingSelected: (parent: AdapterView<*>?) -> Unit = {}
+    ) {
+        this.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                onItemSelected(parent, view, position, id)
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                onNothingSelected(parent)
+            }
         }
     }
 
