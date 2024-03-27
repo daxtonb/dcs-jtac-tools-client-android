@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">DCS JTAC Tools Client</string>
+    <string-array name="protocol_options">
+        <item>ws://</item>
+        <item>wss://</item>
+    </string-array>
 </resources>
