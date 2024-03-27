@@ -1,6 +1,5 @@
 package com.daxtonb.dcsjtactoolsclient
 
-import MainViewModel
 import android.os.Bundle
 import android.view.View
 import android.widget.AdapterView
@@ -11,7 +10,6 @@ import android.widget.Spinner
 import android.widget.Switch
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
 
 class MainActivity : AppCompatActivity() {
 
@@ -44,9 +42,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupViewModel() {
-        viewModel = ViewModelProvider(this, MainViewModelFactory(NetworkRepository())).get(
-            MainViewModel::class.java
-        )
+        viewModel = MainViewModel()
 
         // Observe ViewModel LiveData
         viewModel.unitNames.observe(this, Observer { unitNames ->

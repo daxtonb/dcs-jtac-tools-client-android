@@ -8,7 +8,7 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 
-class NetworkRepository() {
+class NetworkRepository {
     private var _client = OkHttpClient()
     private var _webSocket: WebSocket? = null
     private val _udpSocket: DatagramSocket = DatagramSocket()
