@@ -45,7 +45,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         _intent = Intent(this, DcsJtacHubService::class.java).also { intent ->
-            startForegroundService(intent)
             bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
 
@@ -102,9 +101,11 @@ class MainActivity : AppCompatActivity() {
                 val port = portInput.text.toString()
                 val fullAddress = "$protocol$serverAddress:$port"
                 hubService?.connectToHub(fullAddress)
+                startForegroundService(_intent)
             } else {
                 // Handle disconnection logic
                 hubService?.disconnectFromHub()
+                stopService(_intent)
             }
         }
     }
