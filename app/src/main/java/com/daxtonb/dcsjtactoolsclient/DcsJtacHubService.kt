@@ -111,7 +111,7 @@ class DcsJtacHubService : Service() {
     }
 
     private fun extractUnitName(text: String): String? {
-        val regex = Regex("uid=\"([a-zA-Z0-9_-]+)\"")
+        val regex = Regex("uid=\"([a-zA-Z0-9_ -]+)\"")
         val match = regex.find(text)
         return match?.groups?.get(1)?.value
     }
