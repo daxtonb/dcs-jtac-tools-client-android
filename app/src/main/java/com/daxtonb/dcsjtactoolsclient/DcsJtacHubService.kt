@@ -1,4 +1,5 @@
 package com.daxtonb.dcsjtactoolsclient
+
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -18,16 +19,21 @@ class DcsJtacHubService : Service() {
     private val _unitNames = MutableLiveData<List<String>>()
     private val _unitNamesSet = mutableSetOf<String>()
     private var _selectedUnitName: String? = null
-    private lateinit var _locationMocker: LocationMocker
+    private var _locationMocker: LocationMocker? = null
     private lateinit var _networkRepository: NetworkRepository
 
-    val webSocketStatus = MutableLiveData<Int>(R.drawable.baseline_power_off_24)
+    val webSocketStatus = MutableLiveData(R.drawable.baseline_power_off_24)
     val unitNames: LiveData<List<String>> = _unitNames
 
     override fun onCreate() {
         super.onCreate()
         _networkRepository = NetworkRepository()
-        _locationMocker = LocationMocker(this)
+
+        try {
+            _locationMocker = LocationMocker(this)
+        } catch (e: SecurityException) {
+            println("Location mocks are not enabled")
+        }
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
@@ -49,6 +55,11 @@ class DcsJtacHubService : Service() {
         return _binder
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        _locationMocker?.dispose()
+    }
+
     fun connectToHub(url: String) {
         _networkRepository.connectToHub(url, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: okhttp3.Response) {
@@ -62,11 +73,16 @@ class DcsJtacHubService : Service() {
                     addUnitNameToSet(unitName)
 
                     // If the unit is the selected unit, update the device location
-                    if (_selectedUnitName == unitName) {
+                    if (_selectedUnitName == unitName && _locationMocker != null) {
                         val unit = Persister().read(CursorOnTarget::class.java, text)
-                        _locationMocker.setMockLocation(unit.point.lat,unit.point.lon,unit.point.hae,0.0f)
-                    // Otherwise, send it as a CoT. Additionally, avoid a CoT being placed on the user's location
-                    } else if (!_selectedUnitName.isNullOrEmpty()) {
+                        _locationMocker?.setMockLocation(
+                            unit.point.lat,
+                            unit.point.lon,
+                            unit.point.hae,
+                            0.0f
+                        )
+                        // Otherwise, send it as a CoT. Additionally, avoid a CoT being placed on the user's location
+                    } else if (!_selectedUnitName.isNullOrEmpty() || _locationMocker == null) {
                         _networkRepository.sendCursorOnTarget(text)
                     }
                 }
@@ -76,7 +92,11 @@ class DcsJtacHubService : Service() {
                 webSocketStatus.postValue(R.drawable.baseline_power_off_24)
             }
 
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: okhttp3.Response?) {
+            override fun onFailure(
+                webSocket: WebSocket,
+                t: Throwable,
+                response: okhttp3.Response?
+            ) {
                 webSocketStatus.postValue(R.drawable.baseline_error_24)
             }
         })
@@ -85,6 +105,7 @@ class DcsJtacHubService : Service() {
     fun setSelectedUnit(unitName: String) {
         _selectedUnitName = unitName
     }
+
     fun disconnectFromHub() {
         _networkRepository.disconnectFromHub()
     }
