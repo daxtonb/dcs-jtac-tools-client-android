@@ -18,6 +18,7 @@ import androidx.lifecycle.Observer
 
 class MainActivity : AppCompatActivity() {
     private var _isBound: Boolean = false
+    private var _isLocationMockingEnabled = false
     private var _hubService: DcsJtacHubService? = null
 
     private lateinit var _webSocketStatusIcon: ImageView
@@ -40,10 +41,12 @@ class MainActivity : AppCompatActivity() {
             _isBound = false
         }
     }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        _isLocationMockingEnabled = LocationMocker.checkMockLocationEnabled(this)
         _intent = Intent(this, DcsJtacHubService::class.java).also { intent ->
             bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
@@ -84,7 +87,9 @@ class MainActivity : AppCompatActivity() {
         _unitNameSpinner.setOnItemSelectedListener(onItemSelected = { parent, view, position, id ->
             val selectedUnitName = parent?.getItemAtPosition(position).toString()
             _hubService?.setSelectedUnit(selectedUnitName)
-        } )
+        })
+
+        _unitNameSpinner.isEnabled = _isLocationMockingEnabled
     }
 
     private fun handleServerToggled() {
@@ -127,7 +132,12 @@ class MainActivity : AppCompatActivity() {
         onNothingSelected: (parent: AdapterView<*>?) -> Unit = {}
     ) {
         this.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+            override fun onItemSelected(
+                parent: AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
                 onItemSelected(parent, view, position, id)
             }
 
