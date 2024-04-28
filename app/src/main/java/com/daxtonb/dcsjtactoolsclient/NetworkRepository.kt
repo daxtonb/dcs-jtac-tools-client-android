@@ -18,6 +18,10 @@ class NetworkRepository {
         _webSocket = _client.newWebSocket(request, webSocketListener)
     }
 
+    fun subscribeTopic(topic: String) {
+        _webSocket?.send("SUBSCRIBE//$topic")
+    }
+
     fun sendCursorOnTarget(text: String) {
         try {
             val localhostAddress: InetAddress = InetAddress.getByName("localhost")

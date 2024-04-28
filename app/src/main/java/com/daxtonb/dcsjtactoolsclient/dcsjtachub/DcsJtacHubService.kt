@@ -9,17 +9,20 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.daxtonb.dcsjtactoolsclient.dcsjtachub.messages.HubMessageHandler
+import com.daxtonb.dcsjtactoolsclient.dcsjtachub.messages.HubMessageSpecification
+import com.daxtonb.dcsjtactoolsclient.dcsjtachub.messages.UnitsMessageHandler
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import org.simpleframework.xml.core.Persister
 
 class DcsJtacHubService : Service() {
 
+    private val _unitsTopic = "UNITS"
     private val _binder = LocalBinder()
     private val _unitNames = MutableLiveData<List<String>>()
     private val _unitNamesSet = mutableSetOf<String>()
-    private var _selectedUnitName: String? = null
-    private var _locationMocker: LocationMocker? = null
+    private var _selectedUnitName = MutableLiveData<String?>()
+    private lateinit var _messageHandlers: List<HubMessageHandler>
     private lateinit var _networkRepository: NetworkRepository
 
     val webSocketStatus = MutableLiveData(R.drawable.baseline_power_off_24)
@@ -28,12 +31,15 @@ class DcsJtacHubService : Service() {
     override fun onCreate() {
         super.onCreate()
         _networkRepository = NetworkRepository()
-
-        try {
-            _locationMocker = LocationMocker(this)
-        } catch (e: SecurityException) {
-            println("Location mocks are not enabled")
-        }
+        _messageHandlers = listOf(
+            UnitsMessageHandler(
+                _networkRepository,
+                _selectedUnitName,
+                _unitNamesSet,
+                _unitNames,
+                this
+            )
+        )
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
@@ -57,33 +63,24 @@ class DcsJtacHubService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        _locationMocker?.dispose()
+        _networkRepository.closeConnections()
+        _messageHandlers.forEach {
+            it.dispose()
+        }
     }
 
     fun connectToHub(url: String) {
         _networkRepository.connectToHub(url, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: okhttp3.Response) {
+                _networkRepository.subscribeTopic(_unitsTopic)
                 webSocketStatus.postValue(R.drawable.baseline_power_24)
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
                 webSocketStatus.postValue(R.drawable.baseline_satellite_alt_24)
-                val unitName = extractUnitName(text)
-                if (!unitName.isNullOrEmpty()) {
-                    addUnitNameToSet(unitName)
-
-                    // If the unit is the selected unit, update the device location
-                    if (_selectedUnitName == unitName && _locationMocker != null) {
-                        val unit = Persister().read(CursorOnTarget::class.java, text)
-                        _locationMocker?.setMockLocation(
-                            unit.point.lat,
-                            unit.point.lon,
-                            unit.point.hae,
-                            0.0f
-                        )
-                        // Otherwise, send it as a CoT. Additionally, avoid a CoT being placed on the user's location
-                    } else if (!_selectedUnitName.isNullOrEmpty() || _locationMocker == null) {
-                        _networkRepository.sendCursorOnTarget(text)
+                _messageHandlers.forEach {
+                    if (it is HubMessageSpecification && it.isSatisfiedBy(text)) {
+                        it.processMessage(text)
                     }
                 }
             }
@@ -103,22 +100,13 @@ class DcsJtacHubService : Service() {
     }
 
     fun setSelectedUnit(unitName: String) {
-        _selectedUnitName = unitName
+        synchronized(_selectedUnitName) {
+            _selectedUnitName.value = unitName
+        }
     }
 
     fun disconnectFromHub() {
         _networkRepository.disconnectFromHub()
-    }
-
-    private fun addUnitNameToSet(unitName: String) {
-        synchronized(_unitNamesSet) {
-            val added = _unitNamesSet.add(unitName)
-            if (added) {
-                val sortedList = _unitNamesSet.sorted()
-                _unitNames.postValue(sortedList)
-            }
-            added
-        }
     }
 
     private fun createNotificationChannel() {
@@ -129,12 +117,6 @@ class DcsJtacHubService : Service() {
         )
         val manager = getSystemService(NotificationManager::class.java)
         manager?.createNotificationChannel(serviceChannel)
-    }
-
-    private fun extractUnitName(text: String): String? {
-        val regex = Regex("uid=\"([a-zA-Z0-9_ -]+)\"")
-        val match = regex.find(text)
-        return match?.groups?.get(1)?.value
     }
 
     companion object {
